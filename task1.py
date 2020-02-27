@@ -64,7 +64,7 @@ def build_entity(token, type):
 
 
 def output_entities(sentence_id, entities, outputfile):
-    file = open(outputfile, "w")
+    file = open(outputfile, "a")
     for entity in entities:
         file.write(sentence_id + '|' + entity["offset"] + '|' + entity["name"] + '|' + entity["type"] + '\n')
 
