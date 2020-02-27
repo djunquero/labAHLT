@@ -2,12 +2,10 @@ from xml.dom.minidom import parse
 from nltk.tokenize import word_tokenize
 import os
 
-'''
 import nltk
 nltk.download('punkt')
-'''
 INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Train')
-OUTPUT_FILE = "task_1_output.txt"
+OUTPUT_FILE = "task_1_output_1.txt"
 
 
 def nerc(inputdir, outputfile):
@@ -19,8 +17,8 @@ def nerc(inputdir, outputfile):
             tokenlist = tokenize(text)
             entities = extract_entities(tokenlist)
             output_entities(sentence_id, entities, outputfile)
-            for entity in entities:
-                print(str(entity))
+
+    evaluate(inputdir, outputfile)
 
 '''
         for sentence in tree:
@@ -65,12 +63,14 @@ def build_entity(token, type):
     return entity
 
 
-def output_entities(id, ents, outf):
-    return
+def output_entities(sentence_id, entities, outputfile):
+    file = open(outputfile, "a")
+    for entity in entities:
+        file.write(sentence_id + '|' + entity["offset"] + '|' + entity["name"] + '|' + entity["type"] + '\n')
 
 
 def evaluate(inputdir, outputfile):
-    return
+    os.system("java -jar eval/evaluateNER.jar "+ inputdir + " " + outputfile)
 
 
 if __name__ == "__main__":
