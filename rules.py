@@ -34,6 +34,7 @@ drugs_suffixes = [
 drug_prefixes = [
 "met",
 "phen",
+"quin",
 ]
 
 drug_contained = [

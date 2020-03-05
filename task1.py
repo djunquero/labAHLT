@@ -42,12 +42,12 @@ def extract_entities(tokenlist):
     for token in tokenlist:
         # Rule 1: check drug suffixes
         for suffix in drugs_suffixes:
-            if token[0].endswith(suffix) and len(token[0]) > 3:
+            if token[0].endswith(suffix) and len(token[0]) > 4:
                 entities.append(build_entity(token, "drug"))
                 break
         # Rule 2: check drug prefixes
         for prefix in drug_prefixes:
-            if token[0].startswith(prefix) and len(token[0]) > 3:
+            if token[0].startswith(prefix) and len(token[0]) > 4:
                 entities.append(build_entity(token, "drug"))
                 break
         # Rule 3: Check drug contained
@@ -57,7 +57,7 @@ def extract_entities(tokenlist):
                 break
         # Rule 4: Check drug_n suffixes
         for suffix in drug_n_suffixes:
-            if token[0].endswith(suffix) and len(token[0]) > 3:
+            if token[0].endswith(suffix) and len(token[0]) > 2:
                 entities.append(build_entity(token, "drug_n"))
                 break
         # Rule 5: Check drug_n contained
@@ -80,11 +80,14 @@ def extract_entities(tokenlist):
                     entities.append(build_entity(token, "group"))
                     break
         # Rule 9: Words that have numbers and letters with more than 3 letters are drugs
-        if re.search(r'\d', token[0]) and len(token[0]) >= 3 and re.match("^[A-Za-z]*$", token[0]):
+        if re.search(r'\d', token[0]) and len(token[0]) > 4 and re.match("^[A-Za-z]*$", token[0]):
             entities.append(build_entity(token, "drug"))
         # Rule 10: Words ending in -s (possible plurals) that are very long (+8 characters) are groups
         if token[0].endswith('s') and len(token[0]) > 8:
             entities.append(build_entity(token, "group"))
+        # Rule 10: Digit followed by dash combinations are found in drug_n
+        if re.search(r'\d-', token[0]):
+            entities.append(build_entity(token, "drug_n"))
     return entities
 
 
