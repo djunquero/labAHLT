@@ -33,6 +33,11 @@ drugs_suffixes = [
 ]
 drug_prefixes = [
 "met",
+"phen",
+]
+
+drug_contained = [
+"alcohol"
 ]
 
 drug_n_suffixes = [

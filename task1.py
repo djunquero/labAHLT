@@ -50,34 +50,39 @@ def extract_entities(tokenlist):
             if token[0].startswith(prefix) and len(token[0]) > 3:
                 entities.append(build_entity(token, "drug"))
                 break
-        # Rule 3: Check drug_n suffixes
+        # Rule 3: Check drug contained
+        for contained in drug_contained:
+            if contained in token[0]:
+                entities.append(build_entity(token, "drug"))
+                break
+        # Rule 4: Check drug_n suffixes
         for suffix in drug_n_suffixes:
             if token[0].endswith(suffix) and len(token[0]) > 3:
                 entities.append(build_entity(token, "drug_n"))
                 break
-        # Rule 4: Check drug_n contained
+        # Rule 5: Check drug_n contained
             for contained in drug_n_contained:
                 if contained in token[0]:
                     entities.append(build_entity(token, "drug_n"))
                     break
-        # Rule 5: Full capital letters without numbers and longer than 4 words, they are brands
+        # Rule 6: Full capital letters without numbers and longer than 4 words, they are brands
         if token[0].isupper() and not re.search(r'\d', token[0]) and len(token[0]) > 4:
             entities.append(build_entity(token, "brand"))
 
-        # Rule 6: Group suffixes
+        # Rule 7: Group suffixes
         for suffix in group_suffixes:
             if token[0].endswith(suffix) and len(token[0]) > 3:
                 entities.append(build_entity(token, "group"))
                 break
-        # Rule 7: Group prefixes
+        # Rule 8: Group prefixes
             for prefix in group_prefixes:
                 if token[0].startswith(prefix) and len(token[0]) > 3:
                     entities.append(build_entity(token, "group"))
                     break
-        # Rule 8: Words that have numbers and letters with more than 3 letters are drugs
+        # Rule 9: Words that have numbers and letters with more than 3 letters are drugs
         if re.search(r'\d', token[0]) and len(token[0]) >= 3 and re.match("^[A-Za-z]*$", token[0]):
             entities.append(build_entity(token, "drug"))
-        # Rule 9: Words ending in -s (possible plurals) that are very long (+8 characters) are groups
+        # Rule 10: Words ending in -s (possible plurals) that are very long (+8 characters) are groups
         if token[0].endswith('s') and len(token[0]) > 8:
             entities.append(build_entity(token, "group"))
     return entities
