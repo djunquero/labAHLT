@@ -31,6 +31,9 @@ drugs_suffixes = [
 "mycin",
 "cine"
 ]
+drug_prefixes = [
+"met",
+]
 
 drug_n_suffixes = [
 "heroin",
@@ -38,10 +41,22 @@ drug_n_suffixes = [
 "din",
 "sin"
 ]
-'''
-group:
-" plural 
 
+drug_n_contained = [
+"hydro",
+"toxin"
+]
+group_suffixes = [
+"drugs",
+"ants",
+]
+
+group_prefixes = [
+"anti",
+"beta",
+"anta"
+]
+'''
 brand:
 " capital letters mainly
 '''

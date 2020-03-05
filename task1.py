@@ -1,6 +1,6 @@
 from xml.dom.minidom import parse
 from nltk.tokenize import word_tokenize
-from rules import drugs_suffixes, drug_n_suffixes
+from rules import *
 import os
 import re
 
@@ -42,21 +42,44 @@ def extract_entities(tokenlist):
     for token in tokenlist:
         # Rule 1: check drug suffixes
         for suffix in drugs_suffixes:
-            if token[0].endswith(suffix) and len(token[0]) > 3 and len(token[0]) > 3:
+            if token[0].endswith(suffix) and len(token[0]) > 3:
                 entities.append(build_entity(token, "drug"))
                 break
-        # Rule 2: Check drug_n suffixes
+        # Rule 2: check drug prefixes
+        for prefix in drug_prefixes:
+            if token[0].startswith(prefix) and len(token[0]) > 3:
+                entities.append(build_entity(token, "drug"))
+                break
+        # Rule 3: Check drug_n suffixes
         for suffix in drug_n_suffixes:
             if token[0].endswith(suffix) and len(token[0]) > 3:
                 entities.append(build_entity(token, "drug_n"))
                 break
-        # Rule 3: Full capital letters without numbers are brands
-        if token[0].isupper() and not re.search(r'\d', token[0]) and len(token[0]) > 3:
+        # Rule 4: Check drug_n contained
+            for contained in drug_n_contained:
+                if contained in token[0]:
+                    entities.append(build_entity(token, "drug_n"))
+                    break
+        # Rule 5: Full capital letters without numbers and longer than 4 words, they are brands
+        if token[0].isupper() and not re.search(r'\d', token[0]) and len(token[0]) > 4:
             entities.append(build_entity(token, "brand"))
-        #Rule 4: Groups
-        # Rule 5: Words that have numbers and letters with more than 3 letters are drugs
+
+        # Rule 6: Group suffixes
+        for suffix in group_suffixes:
+            if token[0].endswith(suffix) and len(token[0]) > 3:
+                entities.append(build_entity(token, "group"))
+                break
+        # Rule 7: Group prefixes
+            for prefix in group_prefixes:
+                if token[0].startswith(prefix) and len(token[0]) > 3:
+                    entities.append(build_entity(token, "group"))
+                    break
+        # Rule 8: Words that have numbers and letters with more than 3 letters are drugs
         if re.search(r'\d', token[0]) and len(token[0]) >= 3 and re.match("^[A-Za-z]*$", token[0]):
             entities.append(build_entity(token, "drug"))
+        # Rule 9: Words ending in -s (possible plurals) that are very long (+8 characters) are groups
+        if token[0].endswith('s') and len(token[0]) > 8:
+            entities.append(build_entity(token, "group"))
     return entities
 
 
