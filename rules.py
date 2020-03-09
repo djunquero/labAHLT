@@ -55,6 +55,10 @@ drug_n_contained = [
 group_suffixes = [
 "drugs",
 "ants",
+"ics",
+"tors",
+"blockers",
+"ids"
 ]
 
 group_prefixes = [

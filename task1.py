@@ -3,16 +3,18 @@ from nltk.tokenize import word_tokenize
 from rules import *
 import os
 import re
+from tqdm import tqdm
 
 import nltk
 nltk.download('punkt')
 INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Train')
 OUTPUT_FILE = "task9.1_output_3.txt"
-
+DRUG_SUFFIXES = "suffixes_drug.txt"
+DRUG_PREFIXES = "prefixes_drugs.txt"
 
 def nerc(inputdir, outputfile):
     open(outputfile, "w").close()
-    for file in os.listdir(inputdir):
+    for file in tqdm(os.listdir(inputdir)):
         tree = parse(os.path.join(inputdir, file))
         sentences = tree.getElementsByTagName("sentence")
         for sentence in sentences:
@@ -88,6 +90,17 @@ def extract_entities(tokenlist):
         # Rule 10: Digit followed by dash combinations are found in drug_n
         if re.search(r'\d-', token[0]):
             entities.append(build_entity(token, "drug_n"))
+
+        with open(DRUG_SUFFIXES) as f:
+            for suffix in f:
+                if token[0].endswith(suffix.rstrip()):
+                    entities.append(build_entity(token, "drug"))
+
+        with open(DRUG_PREFIXES) as f:
+            for prefix in f:
+                if token[0].startswith(prefix.rstrip()):
+                    entities.append(build_entity(token, "drug"))
+
     return entities
 
 
