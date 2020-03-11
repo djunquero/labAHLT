@@ -2,6 +2,7 @@ from xml.dom.minidom import parse
 from nltk.tokenize import word_tokenize
 import os
 from tqdm import tqdm
+from itertools import tee
 
 import nltk
 nltk.download('punkt')
@@ -16,11 +17,9 @@ def nerc(inputdir, outputfile):
         sentences = tree.getElementsByTagName("sentence")
         for sentence in sentences:
             (sentence_id, text) = getSentenceInfo(sentence)
-            tokenlist = tokenize(text)
-            features = extract_features(tokenlist)
-            for feature in features:
-                print(str(feature))
-            # output_entities(sentence_id, entities, outputfile)
+            tokenlist = tee(tokenize(text), 2)
+            features = extract_features(tokenlist[0])
+            output_features(sentence_id, tokenlist[1], features, outputfile)
 
     evaluate(inputdir, outputfile)
 
@@ -29,39 +28,41 @@ def getSentenceInfo(sentence):
     return sentence.getAttribute("id"), sentence.getAttribute("text")
 
 
-def tokenize(txt):
-    tokens = word_tokenize(txt)
+def tokenize(text):
+    tokens = word_tokenize(text)
     offset = 0
     for token in tokens:
-        offset = txt.find(token, offset)
-        yield token, offset, offset + len(token)
+        offset = text.find(token, offset)
+        yield token, offset, offset + len(token)-1
         offset += len(token)
 
 
 def extract_features(tokenlist):
     feature_vectors = []
     previous_word = word = capitalized = ""
-    iterator = iter(tokenlist)
-    next_word = next(iterator)[0]
-    while True:
-        try:
-            word = next_word
-            if word.isupper():
-                capitalized = "upper"
-            elif word.islower():
-                capitalized = "lower"
-            elif word[0].isupper():
-                capitalized = "capitalized"
-            elif word.isnumeric():
-                capitalized = "numeric"
-            else:
-                capitalized = "mixed"
-            next_word = next(iterator)[0]
-            feature_vectors.append(build_feature(word, previous_word, next_word, word[-4:], word[:4], capitalized))
-            previous_word = word
-        except StopIteration:
-            feature_vectors.append(build_feature(word, previous_word, "", word[-4:], word[:4], capitalized))
-            break
+    try:
+        next_word = next(tokenlist)[0]
+        while True:
+            try:
+                word = next_word
+                if word.isupper():
+                    capitalized = "upper"
+                elif word.islower():
+                    capitalized = "lower"
+                elif word[0].isupper():
+                    capitalized = "capitalized"
+                elif word.isnumeric():
+                    capitalized = "numeric"
+                else:
+                    capitalized = "mixed"
+                next_word = next(tokenlist)[0]
+                feature_vectors.append(build_feature(word, previous_word, next_word, word[-4:], word[:4], capitalized))
+                previous_word = word
+            except StopIteration:
+                feature_vectors.append(build_feature(word, previous_word, "", word[-4:], word[:4], capitalized))
+                break
+    except StopIteration:
+        pass
     return feature_vectors
 
 
@@ -78,10 +79,17 @@ def build_feature(word, previous_word, next_word, suffix, prefix, capitalized):
     return feature
 
 
-def output_entities(sentence_id, entities, outputfile):
-    file = open(outputfile, "a")
+def output_features(sentence_id, entities, features, outputfile):
+    # file = open(outputfile, "a")
+    i = 0
     for entity in entities:
-        file.write(sentence_id + '|' + entity["offset"] + '|' + entity["name"] + '|' + entity["type"] + '\n')
+        output = sentence_id + '\t' + entity[0] + '\t' + str(entity[1]) + '\t' + str(entity[2])
+        for feature in features[i]:
+            output += '\t' + feature
+        output += '\n'
+        i += 1
+        print(output)
+        # file.write(sentence_id + '|' + entity["offset"] + '|' + entity["name"] + '|' + entity["type"] + '\n')
 
 
 def evaluate(inputdir, outputfile):

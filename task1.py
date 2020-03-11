@@ -35,7 +35,7 @@ def tokenize(txt):
     offset = 0
     for token in tokens:
         offset = txt.find(token, offset)
-        yield token, offset, offset + len(token)
+        yield token, offset, offset + len(token) - 1
         offset += len(token)
 
 
@@ -107,7 +107,7 @@ def extract_entities(tokenlist):
 def build_entity(token, type):
     entity = {
         "name": token[0],
-        "offset": str(token[1]) + "-" + str(token[2]-1),
+        "offset": str(token[1]) + "-" + str(token[2]),
         "type": type
     }
     return entity
