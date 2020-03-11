@@ -3,11 +3,13 @@ from nltk.tokenize import word_tokenize
 import os
 from tqdm import tqdm
 from itertools import tee
+import pycrfsuite
 
 import nltk
 nltk.download('punkt')
 INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Train')
-OUTPUT_FILE = "task9.1_output_3.txt"
+OUTPUT_FILE = "task9.2_output_3.txt"
+MODEL = "task9.2_model.crfsuite"
 
 
 def nerc(inputdir, outputfile):
@@ -17,9 +19,12 @@ def nerc(inputdir, outputfile):
         sentences = tree.getElementsByTagName("sentence")
         for sentence in sentences:
             (sentence_id, text) = getSentenceInfo(sentence)
-            tokenlist = tee(tokenize(text), 2)
+            tokenlist = tee(tokenize(text), 3)
             features = extract_features(tokenlist[0])
             output_features(sentence_id, tokenlist[1], features, outputfile)
+            learner(features)
+            predicted_classes = classifier(features)
+            output_entities(sentence_id, tokenlist[2],predicted_classes, outputfile)
 
     evaluate(inputdir, outputfile)
 
@@ -90,6 +95,48 @@ def output_features(sentence_id, entities, features, outputfile):
         i += 1
         print(output)
         # file.write(sentence_id + '|' + entity["offset"] + '|' + entity["name"] + '|' + entity["type"] + '\n')
+    return output
+
+
+def learner(features):
+    trainer = pycrfsuite.Trainer(verbose=False)
+    labels = ["drug", "drug_n", "brand", "group"]
+
+    # TODO: Define X_Train (features) and Y_Train (labels)
+    for X_Train, Y_Train in zip(features, labels):
+        trainer.append(X_Train, Y_Train)
+
+    trainer.set_params({
+        'c1': 1.0,  # coefficient for L1 penalty
+        'c2': 1e-3,  # coefficient for L2 penalty
+        'max_iterations': 50,  # stop earlier
+
+        # include transitions that are possible, but not observed
+        'feature.possible_transitions': True
+    })
+    trainer.train(MODEL)
+    print(len(trainer.logparser.iterations), trainer.logparser.iterations[-1])
+
+
+def classifier(features):
+    predicted_classes = []
+
+    tagger = pycrfsuite.Tagger()
+    tagger.open(MODEL)
+
+    # TODO: Placeholder, feature vector might need to be prepared
+    for feature in features:
+        predicted_classes.append(tagger.tag(feature))
+
+    return predicted_classes
+
+
+def output_entities(sentence_id, entities, classes, outputfile):
+    file = open(outputfile, "a")
+    i = 0
+    for entity in entities:
+        file.write(sentence_id + '|' + entity[1] + '|' + entity[2] + '|' + classes[i] + '\n')
+        i += 1
 
 
 def evaluate(inputdir, outputfile):
