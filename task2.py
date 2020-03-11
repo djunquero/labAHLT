@@ -8,6 +8,7 @@ nltk.download('punkt')
 INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Train')
 OUTPUT_FILE = "task9.1_output_3.txt"
 
+
 def nerc(inputdir, outputfile):
     open(outputfile, "w").close()
     for file in tqdm(os.listdir(inputdir)):
@@ -16,8 +17,10 @@ def nerc(inputdir, outputfile):
         for sentence in sentences:
             (sentence_id, text) = getSentenceInfo(sentence)
             tokenlist = tokenize(text)
-            entities = extract_entities(tokenlist)
-            output_entities(sentence_id, entities, outputfile)
+            features = extract_features(tokenlist)
+            for feature in features:
+                print(str(feature))
+            # output_entities(sentence_id, entities, outputfile)
 
     evaluate(inputdir, outputfile)
 
@@ -35,18 +38,44 @@ def tokenize(txt):
         offset += len(token)
 
 
-def extract_entities(tokenlist):
-    entities = []
-    return entities
+def extract_features(tokenlist):
+    feature_vectors = []
+    previous_word = word = capitalized = ""
+    iterator = iter(tokenlist)
+    next_word = next(iterator)[0]
+    while True:
+        try:
+            word = next_word
+            if word.isupper():
+                capitalized = "upper"
+            elif word.islower():
+                capitalized = "lower"
+            elif word[0].isupper():
+                capitalized = "capitalized"
+            elif word.isnumeric():
+                capitalized = "numeric"
+            else:
+                capitalized = "mixed"
+            next_word = next(iterator)[0]
+            feature_vectors.append(build_feature(word, previous_word, next_word, word[-4:], word[:4], capitalized))
+            previous_word = word
+        except StopIteration:
+            feature_vectors.append(build_feature(word, previous_word, "", word[-4:], word[:4], capitalized))
+            break
+    return feature_vectors
 
 
-def build_entity(token, type):
-    entity = {
-        "name": token[0],
-        "offset": str(token[1]) + "-" + str(token[2]-1),
-        "type": type
-    }
-    return entity
+def build_feature(word, previous_word, next_word, suffix, prefix, capitalized):
+    feature = [
+        "word="+word,
+        "previous=" + previous_word,
+        "next=" + next_word,
+        "suffix=" + suffix,
+        "prefix=" + prefix,
+        "capitalized=" + capitalized
+    ]
+
+    return feature
 
 
 def output_entities(sentence_id, entities, outputfile):
