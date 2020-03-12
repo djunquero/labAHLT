@@ -27,10 +27,20 @@ def nerc(inputdir, outputfile):
 
 
 def getSentenceInfo(sentence):
+    """ Extracts the sentence ID and the text body from the XML attributes.
+
+            :param sentence: A sentence in XML format. Must contain "id" and "text" attributes
+            :returns: A paired tuple with (id, text)
+    """
     return sentence.getAttribute("id"), sentence.getAttribute("text")
 
 
 def tokenize(txt):
+    """ Splits text into tokens, returning a generator with all the words and special characters obtained
+
+            :param text: A String containing the text to be tokenized
+            :returns: Generator containing tokens extracted from the sentence
+    """
     tokens = word_tokenize(txt)
     offset = 0
     for token in tokens:
@@ -40,6 +50,11 @@ def tokenize(txt):
 
 
 def extract_entities(tokenlist):
+    """ Makes a prediction on the drugs contained in a sentence using a set of rules
+
+            :param tokenlist: The tokenized sentence to be analyzed
+            :returns: A list of dictionaries of predicted drugs, with their name, offset and type
+    """
     entities = []
     for token in tokenlist:
         # Rule 1: check drug suffixes
@@ -91,11 +106,13 @@ def extract_entities(tokenlist):
         if re.search(r'\d-', token[0]):
             entities.append(build_entity(token, "drug_n"))
 
+        # Rule 11: Drug suffixes with external information
         with open(DRUG_SUFFIXES) as f:
             for suffix in f:
                 if token[0].endswith(suffix.rstrip()):
                     entities.append(build_entity(token, "drug"))
 
+        # Rule 12: Drug prefixes with external information
         with open(DRUG_PREFIXES) as f:
             for prefix in f:
                 if token[0].startswith(prefix.rstrip()):
@@ -105,6 +122,12 @@ def extract_entities(tokenlist):
 
 
 def build_entity(token, type):
+    """ Creates a dictionary representing a predicted drug
+
+            :param token: The token that is being classified
+            :param type: The type of drug predicted
+            :returns: A dictionary representing a predicted drug
+    """
     entity = {
         "name": token[0],
         "offset": str(token[1]) + "-" + str(token[2]),
@@ -114,12 +137,24 @@ def build_entity(token, type):
 
 
 def output_entities(sentence_id, entities, outputfile):
+    """ Outputs all sentences in an appropiate format to be evaluated.
+        Doesn't return anything but it creates a text file with a line for every drug prediction.
+
+            :param sentence_id: Identifier of the sentence
+            :param entities: The tokenized sentence as a generator, containing the token, offset and type predicted
+            :param outputfile: The relative file path where the output should be stored
+    """
     file = open(outputfile, "a")
     for entity in entities:
         file.write(sentence_id + '|' + entity["offset"] + '|' + entity["name"] + '|' + entity["type"] + '\n')
 
 
 def evaluate(inputdir, outputfile):
+    """ Starts the evaluation process, which computes the nerc score.
+
+            :param inputdir: Relative path to the training folder
+            :param outputfile: File containing the predictions to be evaluated
+    """
     os.system("java -jar eval/evaluateNER.jar "+ inputdir + " " + outputfile)
 
 
