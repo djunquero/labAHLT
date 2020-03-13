@@ -102,17 +102,17 @@ def extract_entities(tokenlist):
         # Rule 10: Words ending in -s (possible plurals) that are very long (+8 characters) are groups
         if token[0].endswith('s') and len(token[0]) > 8:
             entities.append(build_entity(token, "group"))
-        # Rule 10: Digit followed by dash combinations are found in drug_n
+        # Rule 11: Digit followed by dash combinations are found in drug_n
         if re.search(r'\d-', token[0]):
             entities.append(build_entity(token, "drug_n"))
 
-        # Rule 11: Drug suffixes with external information
+        # Rule 12: Drug suffixes with external information
         with open(DRUG_SUFFIXES) as f:
             for suffix in f:
                 if token[0].endswith(suffix.rstrip()):
                     entities.append(build_entity(token, "drug"))
 
-        # Rule 12: Drug prefixes with external information
+        # Rule 13: Drug prefixes with external information
         with open(DRUG_PREFIXES) as f:
             for prefix in f:
                 if token[0].startswith(prefix.rstrip()):
