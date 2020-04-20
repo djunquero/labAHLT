@@ -1,9 +1,11 @@
 from xml.dom.minidom import parse
-from nltk.tokenize import word_tokenize
-from rules import *
+from nltk.parse.corenlp import CoreNLPDependencyParser
 import os
-import re
 from tqdm import tqdm
+
+
+# cd stanford-corenlp-full-2018-10-05
+# java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer
 
 import nltk
 nltk.download('punkt')
@@ -11,14 +13,14 @@ INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Train')
 OUTPUT_FILE = "task9.2_output_1.txt"
 
 
-def nerc(inputdir, outputfile):
+def ddi(inputdir, outputfile):
     open(outputfile, "w").close()
     for file in tqdm(os.listdir(inputdir)):
         tree = parse(os.path.join(inputdir, file))
         sentences = tree.getElementsByTagName("sentence")
         for sentence in sentences:
-            sentence_id = sentence.getAttribute("id").value
-            sentence_text = sentence.getAttribute("text").value
+            sentence_id = sentence.getAttribute("id")
+            sentence_text = sentence.getAttribute("text")
 
             entities = {}
             ents = sentence.getElementsByTagName("entity")
@@ -29,26 +31,22 @@ def nerc(inputdir, outputfile):
                 entities[id] = entity_offset
 
             analysis = analyze(sentence_text)
+            print(str(analysis))
 
             pairs = sentence.getElementsByTagName("pair")
             for pair in pairs:
                 id_entity_1 = pair.attributes["e1"].value
                 id_entity_2 = pair.attributes["e2"].value
-                (is_ddi, ddi_type) = check_interaction(analysis, entities, id_entity_1, id_entity_2)
-                print("|".join([sentence_id, id_entity_1, id_entity_2, is_ddi, ddi_type]), file=outputfile)
+                # (is_ddi, ddi_type) = check_interaction(analysis, entities, id_entity_1, id_entity_2)
+                # print("|".join([sentence_id, id_entity_1, id_entity_2, is_ddi, ddi_type]), file=outputfile)
 
     evaluate(inputdir, outputfile)
 
 
 def analyze(sentence_text):
-    tokens = word_tokenize(sentence_text)
-    offset = 0
-    for token in tokens:
-        offset = text.find(token, offset)
-        yield token, offset, offset + len(token)-1
-        offset += len(token)
-
-    return []
+    parser = CoreNLPDependencyParser(url="http://localhost:9000")
+    tree, = parser.raw_parse(sentence_text)
+    return tree
 
 
 def check_interaction(analysis, entities, id_entity_1, id_entity_2):
@@ -61,8 +59,8 @@ def evaluate(inputdir, outputfile):
             :param inputdir: Relative path to the training folder
             :param outputfile: File containing the predictions to be evaluated
     """
-    os.system("java -jar eval/evaluateNER.jar "+ inputdir + " " + outputfile)
+    os.system("java -jar eval/evaluateDDI.jar "+ inputdir + " " + outputfile)
 
 
 if __name__ == "__main__":
-    nerc(INPUT_DIR, OUTPUT_FILE)
+    ddi(INPUT_DIR, OUTPUT_FILE)
