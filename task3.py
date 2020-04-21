@@ -31,7 +31,6 @@ def ddi(inputdir, outputfile):
                 entities[id] = entity_offset
 
             analysis = analyze(sentence_text)
-            print(str(analysis))
 
             pairs = sentence.getElementsByTagName("pair")
             for pair in pairs:
@@ -45,8 +44,21 @@ def ddi(inputdir, outputfile):
 
 def analyze(sentence_text):
     parser = CoreNLPDependencyParser(url="http://localhost:9000")
-    tree, = parser.raw_parse(sentence_text)
-    return tree
+    dependency_graph, = parser.raw_parse(sentence_text)
+
+    address = 0
+    offset = 0
+    while dependency_graph.contains_address(address):
+        node = dependency_graph.get_by_address(address)
+        word = node["word"]
+        if isinstance(word, str):
+            offset = sentence_text.find(word, offset)
+            node["start"] = offset
+            node["end"] = offset + len(word) - 1
+            offset += len(word)
+        address += 1
+
+    return dependency_graph
 
 
 def check_interaction(analysis, entities, id_entity_1, id_entity_2):
