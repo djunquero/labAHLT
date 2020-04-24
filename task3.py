@@ -28,7 +28,7 @@ def ddi(inputdir, outputfile):
             for entity in ents:
                 entity_id = entity.attributes["id"].value
                 entity_offset = entity.attributes["charOffset"].value.split("-")
-                entities[id] = entity_offset
+                entities[entity_id] = entity_offset
 
             analysis = analyze(sentence_text)
 
@@ -36,33 +36,84 @@ def ddi(inputdir, outputfile):
             for pair in pairs:
                 id_entity_1 = pair.attributes["e1"].value
                 id_entity_2 = pair.attributes["e2"].value
-                # (is_ddi, ddi_type) = check_interaction(analysis, entities, id_entity_1, id_entity_2)
-                # print("|".join([sentence_id, id_entity_1, id_entity_2, is_ddi, ddi_type]), file=outputfile)
+                (is_ddi, ddi_type) = check_interaction(analysis, entities, id_entity_1, id_entity_2)
+                file = open(outputfile, "a")
+                file.write("|".join([sentence_id, id_entity_1, id_entity_2, is_ddi, ddi_type])+'\n')
 
     evaluate(inputdir, outputfile)
 
 
 def analyze(sentence_text):
     parser = CoreNLPDependencyParser(url="http://localhost:9000")
-    dependency_graph, = parser.raw_parse(sentence_text)
+    try:
+        dependency_graph, = parser.raw_parse(sentence_text)
 
-    address = 0
-    offset = 0
-    while dependency_graph.contains_address(address):
-        node = dependency_graph.get_by_address(address)
-        word = node["word"]
-        if isinstance(word, str):
-            offset = sentence_text.find(word, offset)
-            node["start"] = offset
-            node["end"] = offset + len(word) - 1
-            offset += len(word)
-        address += 1
+        address = 0
+        offset = 0
+        while dependency_graph.contains_address(address):
+            node = dependency_graph.get_by_address(address)
+            word = node["word"]
+            if isinstance(word, str):
+                offset = sentence_text.find(word, offset)
+                node["start"] = offset
+                node["end"] = offset + len(word) - 1
+                offset += len(word)
+            address += 1
 
-    return dependency_graph
+        return dependency_graph
+    except StopIteration:
+        return None
 
 
 def check_interaction(analysis, entities, id_entity_1, id_entity_2):
-    return []
+
+    address = 0
+    entity_1_address = None
+    entity_2_address = None
+
+    # Finding nodes for each entity
+    while analysis.contains_address(address):
+        node = analysis.get_by_address(address)
+        if isinstance(node["word"], str):
+            if entities[id_entity_1][0] == str(node["start"]):
+                entity_1_address = address
+            elif entities[id_entity_2][0] == str(node["start"]):
+                entity_2_address = address
+            if entity_1_address is not None and entity_2_address is not None:
+                break
+        address += 1
+
+    entity_1 = analysis.get_by_address(entity_1_address)
+    entity_2 = analysis.get_by_address(entity_2_address)
+
+    effect = 0
+    mechanism = 0
+    interaction = 0
+    advise = 0
+
+    # Rule 1
+    if analysis.get_by_address(entity_1["head"])["word"] in ["effects"]:
+        effect += 1
+    # Rule 2
+    if analysis.get_by_address(entity_1["head"])["rel"] == "nsubj":
+        effect += 1
+    # Rule 3
+    if entity_1["tag"] == "NN" and entity_2["tag"] == "NN" or  entity_2["tag"] == "NN" and entity_1["tag"] == "NN":
+        effect += 1
+
+    if effect + mechanism + interaction + advise < 2:
+        return "0", "null"
+
+    interaction_type = max(effect, mechanism, interaction, advise)
+
+    if interaction_type == effect:
+        return "1", "effect"
+    elif interaction_type == mechanism:
+        return "1", "mechanism"
+    elif interaction_type == interaction:
+        return "1", "int"
+    else:
+        return "1", "advise"
 
 
 def evaluate(inputdir, outputfile):
