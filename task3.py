@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 import nltk
 nltk.download('punkt')
-INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Train')
+INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Devel')
 OUTPUT_FILE = "task9.2_output_1.txt"
 
 
@@ -115,15 +115,15 @@ def check_interaction(analysis, entities, id_entity_1, id_entity_2):
         if analysis.get_by_address(address)["lemma"] in ["reduce", "increase", "decrease"]:
             mechanism += 2
 
-    # Rule 5: Clue words in betweeen for "interaction"
+    # Rule 6: Clue words in betweeen for "advise"
     for address in range(entity_1_address, entity_2_address):
-        if analysis.get_by_address(address)["lemma"] in ["interact"]:
-            interaction += 2
+        if analysis.get_by_address(address)["lemma"] in ["interact", "interaction", "between", "may", "significant", "interfere"]:
+            interaction += 1
 
     # Rule 6: Clue words in betweeen for "advise"
     for address in range(entity_1_address, entity_2_address):
-        if analysis.get_by_address(address)["lemma"] in ["monitor"]:
-            advise += 2
+        if analysis.get_by_address(address)["lemma"] in ["should", "require", "recommend", "is"]:
+            advise += 1
 
     if effect + mechanism + interaction + advise < 2:
         return "0", "null"
