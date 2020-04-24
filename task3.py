@@ -83,6 +83,9 @@ def check_interaction(analysis, entities, id_entity_1, id_entity_2):
                 break
         address += 1
 
+    if entity_1_address is None or entity_2_address is None:
+        return "0", "null"
+
     entity_1 = analysis.get_by_address(entity_1_address)
     entity_2 = analysis.get_by_address(entity_2_address)
 
@@ -98,8 +101,27 @@ def check_interaction(analysis, entities, id_entity_1, id_entity_2):
     if analysis.get_by_address(entity_1["head"])["rel"] == "nsubj":
         effect += 1
     # Rule 3
-    if entity_1["tag"] == "NN" and entity_2["tag"] == "NN" or  entity_2["tag"] == "NN" and entity_1["tag"] == "NN":
+    if entity_1["tag"] == "NN" and entity_2["tag"] == "NN" or entity_2["tag"] == "NN" and entity_1["tag"] == "NN":
         effect += 1
+    # Rule 4: If an entity is a noun modifier of the word "levels"
+    if analysis.get_by_address(entity_1["head"])["word"] in ["levels"] and entity_1["rel"] == "nmod" or \
+            analysis.get_by_address(entity_2["head"])["word"] in ["levels"] and entity_2["rel"] == "nmod":
+        mechanism += 2
+
+    # Rule 5: Clue words in betweeen for "effect"
+    for address in range(entity_1_address, entity_2_address):
+        if analysis.get_by_address(address)["lemma"] in ["administer", "potentiate", "prevent"]:
+            effect += 2
+
+    # Rule 6: Clue words in betweeen for "mechanism"
+    for address in range(entity_1_address, entity_2_address):
+        if analysis.get_by_address(address)["lemma"] in ["reduce", "increase", "decrease"]:
+            mechanism += 2
+
+    # Rule 7: Clue words in betweeen for "interaction"
+    for address in range(entity_1_address, entity_2_address):
+        if analysis.get_by_address(address)["lemma"] in ["interact", "interaction"]:
+            interaction += 2
 
     if effect + mechanism + interaction + advise < 2:
         return "0", "null"
@@ -122,7 +144,7 @@ def evaluate(inputdir, outputfile):
             :param inputdir: Relative path to the training folder
             :param outputfile: File containing the predictions to be evaluated
     """
-    os.system("java -jar eval/evaluateDDI.jar "+ inputdir + " " + outputfile)
+    os.system("java -jar eval/evaluateDDI.jar " + inputdir + " " + outputfile)
 
 
 if __name__ == "__main__":
