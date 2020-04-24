@@ -115,12 +115,17 @@ def check_interaction(analysis, entities, id_entity_1, id_entity_2):
         if analysis.get_by_address(address)["lemma"] in ["reduce", "increase", "decrease"]:
             mechanism += 2
 
-    # Rule 6: Clue words in betweeen for "advise"
-    for address in range(entity_1_address, entity_2_address):
-        if analysis.get_by_address(address)["lemma"] in ["interact", "interaction", "between", "may", "significant", "interfere"]:
-            interaction += 1
+    # Rule 5: Clue words in betweeen begining of the sentence and an entity for "interaction"
+    for address in range(1, entity_2_address):
+        if analysis.get_by_address(address)["lemma"] in ["interact", "interaction"]:
+            interaction += 2
 
-    # Rule 6: Clue words in betweeen for "advise"
+    # Rule 6: Clue words in betweeen begining of the sentence and an entity for "interaction"
+    for address in range(1, entity_2_address):
+        if analysis.get_by_address(address)["lemma"] == "drug" and analysis.get_by_address(analysis.get_by_address(address)["head"])["lemma"] == "interaction":
+            interaction += 2
+
+    # Rule 7: Clue words in betweeen for "advise"
     for address in range(entity_1_address, entity_2_address):
         if analysis.get_by_address(address)["lemma"] in ["should", "require", "recommend", "is"]:
             advise += 1
