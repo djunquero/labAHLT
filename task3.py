@@ -94,34 +94,36 @@ def check_interaction(analysis, entities, id_entity_1, id_entity_2):
     interaction = 0
     advise = 0
 
-    # Rule 1
-    if analysis.get_by_address(entity_1["head"])["word"] in ["effects"]:
-        effect += 1
-    # Rule 2
-    if analysis.get_by_address(entity_1["head"])["rel"] == "nsubj":
-        effect += 1
-    # Rule 3
-    if entity_1["tag"] == "NN" and entity_2["tag"] == "NN" or entity_2["tag"] == "NN" and entity_1["tag"] == "NN":
-        effect += 1
-    # Rule 4: If an entity is a noun modifier of the word "levels"
+
+    # Rule 1: An entity has the key words in the "head"
+    if analysis.get_by_address(entity_1["head"])["word"] in ["effects"] or \
+            analysis.get_by_address(entity_2["head"])["word"] in ["effects"]:
+        effect += 2
+
+    # Rule 2: If an entity is a noun modifier of the word "levels"
     if analysis.get_by_address(entity_1["head"])["word"] in ["levels"] and entity_1["rel"] == "nmod" or \
             analysis.get_by_address(entity_2["head"])["word"] in ["levels"] and entity_2["rel"] == "nmod":
         mechanism += 2
 
-    # Rule 5: Clue words in betweeen for "effect"
+    # Rule 3: Clue words in betweeen for "effect"
     for address in range(entity_1_address, entity_2_address):
         if analysis.get_by_address(address)["lemma"] in ["administer", "potentiate", "prevent"]:
             effect += 2
 
-    # Rule 6: Clue words in betweeen for "mechanism"
+    # Rule 4: Clue words in betweeen for "mechanism"
     for address in range(entity_1_address, entity_2_address):
         if analysis.get_by_address(address)["lemma"] in ["reduce", "increase", "decrease"]:
             mechanism += 2
 
-    # Rule 7: Clue words in betweeen for "interaction"
+    # Rule 5: Clue words in betweeen for "interaction"
     for address in range(entity_1_address, entity_2_address):
-        if analysis.get_by_address(address)["lemma"] in ["interact", "interaction"]:
+        if analysis.get_by_address(address)["lemma"] in ["interact"]:
             interaction += 2
+
+    # Rule 6: Clue words in betweeen for "advise"
+    for address in range(entity_1_address, entity_2_address):
+        if analysis.get_by_address(address)["lemma"] in ["monitor"]:
+            advise += 2
 
     if effect + mechanism + interaction + advise < 2:
         return "0", "null"
