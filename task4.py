@@ -2,7 +2,6 @@ from xml.dom.minidom import parse
 from nltk.parse.corenlp import CoreNLPDependencyParser
 from nltk.classify import MaxentClassifier
 import os
-import numpy
 from tqdm import tqdm
 
 
@@ -13,19 +12,28 @@ import nltk
 nltk.download('punkt')
 TRAIN_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Test-DDI')
 DEVEL_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Devel')
-VERSION = 1
+OUTPUT_FILE = "task9.2_output_2.txt"
 
 
-def ddi(train_inputdir, devel_inputdir):
+def ddi(train_inputdir, devel_inputdir, outputfile):
 
     training_vector = feature_extractor(train_inputdir, True)
     test_vector = feature_extractor(devel_inputdir, False)
 
-    classifier = MaxentClassifier.train(training_vector, algorithm="iis", max_iter=20)
+    featuresets = []
+    for featureset in training_vector:
+        featuresets = featuresets + featureset[1]
+    classifier = MaxentClassifier.train(featuresets, algorithm="iis", max_iter=20)
 
+    file = open(outputfile, "w")
     for featureset in test_vector:
-        result = classifier.classify(featureset)
-        print("Ended succesfully")
+        result = classifier.classify(featureset[1])
+        if result == "null":
+            file.write(featureset[0] + '|0|' + result + '\n')
+        else:
+            file.write(featureset[0] + '|1|' + result + '\n')
+
+    evaluate(DEVEL_INPUT_DIR, outputfile)
 
 
 def feature_extractor(inputdir, training=True):
@@ -58,7 +66,7 @@ def feature_extractor(inputdir, training=True):
                 else:
                     interaction_type = "null"
 
-                vector = vector + output_features(interaction_type, features, training)
+                vector.append(output_features(sentence_id, id_entity_1, id_entity_2, interaction_type, features, training))
     return vector
 
 
@@ -121,13 +129,13 @@ def extract_features(analysis, entities, id_entity_1, id_entity_2):
     return features
 
 
-def output_features(interaction_type, features, training):
-    vector = []
+def output_features(sentence_id, id_entity_1, id_entity_2, interaction_type, features, training):
     if training:
-        vector = vector + [(word_feats(features), interaction_type)]
+        featureset = [(word_feats(features), interaction_type)]
     else:
-        vector = vector + [word_feats(features)]
+        featureset = word_feats(features)
     # print(sentence_id + ' ' + id_entity_1 + ' ' + id_entity_2 + ' ' + interaction_type + ' ' + str_features[:-1])
+    vector = ["|".join([sentence_id, id_entity_1, id_entity_2]), featureset]
     return vector
 
 
@@ -145,4 +153,4 @@ def evaluate(inputdir, outputfile):
 
 
 if __name__ == "__main__":
-    ddi(TRAIN_INPUT_DIR, DEVEL_INPUT_DIR)
+    ddi(TRAIN_INPUT_DIR, DEVEL_INPUT_DIR, OUTPUT_FILE)
