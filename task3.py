@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 import nltk
 nltk.download('punkt')
-INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Devel')
+INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\\Devel')
 OUTPUT_FILE = "task9.2_output_1.txt"
 
 
@@ -44,10 +44,14 @@ def ddi(inputdir, outputfile):
 
 
 def analyze(sentence_text):
+
+    # Core NLP is used. It sometimes throws StopIteration exception, in which case the analysis continues with the next
+    # sentence
     parser = CoreNLPDependencyParser(url="http://localhost:9000")
     try:
         dependency_graph, = parser.raw_parse(sentence_text)
 
+        # For every word, the offset is added to the corresponding node
         address = 0
         offset = 0
         while dependency_graph.contains_address(address):
@@ -89,6 +93,10 @@ def check_interaction(analysis, entities, id_entity_1, id_entity_2):
     entity_1 = analysis.get_by_address(entity_1_address)
     entity_2 = analysis.get_by_address(entity_2_address)
 
+
+    # Weights for every type. Different rules may have different weights for each type, as some rules might
+    # indicate a strong correlation between the pair and a type,
+    # whereas others can be more generic (increases all types)
     effect = 0
     mechanism = 0
     interaction = 0
@@ -130,9 +138,11 @@ def check_interaction(analysis, entities, id_entity_1, id_entity_2):
         if analysis.get_by_address(address)["lemma"] in ["should", "require", "recommend", "is"]:
             advise += 1
 
+    # Heuristic requirement: An interaction will be considered only if enough rules passed.
     if effect + mechanism + interaction + advise < 2:
         return "0", "null"
 
+    # The chosen type corresponds to the one with the highest weight
     interaction_type = max(effect, mechanism, interaction, advise)
 
     if interaction_type == effect:

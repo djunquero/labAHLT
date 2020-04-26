@@ -10,8 +10,8 @@ from tqdm import tqdm
 
 import nltk
 nltk.download('punkt')
-TRAIN_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Test-DDI')
-DEVEL_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Devel')
+TRAIN_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\\Train')
+DEVEL_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\\Devel')
 OUTPUT_FILE = "task9.2_output_2.txt"
 
 
@@ -23,7 +23,7 @@ def ddi(train_inputdir, devel_inputdir, outputfile):
     featuresets = []
     for featureset in training_vector:
         featuresets = featuresets + featureset[1]
-    classifier = MaxentClassifier.train(featuresets, algorithm="iis", max_iter=20)
+    classifier = MaxentClassifier.train(featuresets, algorithm="iis", max_iter=100)
 
     file = open(outputfile, "w")
     for featureset in test_vector:
@@ -53,43 +53,45 @@ def feature_extractor(inputdir, training=True):
                 entity_offset = entity.attributes["charOffset"].value.split("-")
                 entities[entity_id] = entity_offset
 
-            analysis = analyze(sentence_text)
+            try:
+                analysis = analyze(sentence_text)
 
-            pairs = sentence.getElementsByTagName("pair")
-            for pair in pairs:
-                id_entity_1 = pair.attributes["e1"].value
-                id_entity_2 = pair.attributes["e2"].value
-                features = extract_features(analysis, entities, id_entity_1, id_entity_2)
+                pairs = sentence.getElementsByTagName("pair")
+                for pair in pairs:
+                    id_entity_1 = pair.attributes["e1"].value
+                    id_entity_2 = pair.attributes["e2"].value
+                    features = extract_features(analysis, entities, id_entity_1, id_entity_2)
 
-                if pair.hasAttribute("type"):
-                    interaction_type = pair.attributes["type"].value
-                else:
-                    interaction_type = "null"
-
-                vector.append(output_features(sentence_id, id_entity_1, id_entity_2, interaction_type, features, training))
+                    if pair.hasAttribute("type"):
+                        interaction_type = pair.attributes["type"].value
+                    else:
+                        interaction_type = "null"
+                    vector.append(output_features(sentence_id, id_entity_1, id_entity_2,
+                                                  interaction_type, features, training))
+            except AttributeError:
+                pass
+            except StopIteration:
+                pass
     return vector
 
 
 def analyze(sentence_text):
     parser = CoreNLPDependencyParser(url="http://localhost:9000")
-    try:
-        dependency_graph, = parser.raw_parse(sentence_text)
+    dependency_graph, = parser.raw_parse(sentence_text)
 
-        address = 0
-        offset = 0
-        while dependency_graph.contains_address(address):
-            node = dependency_graph.get_by_address(address)
-            word = node["word"]
-            if isinstance(word, str):
-                offset = sentence_text.find(word, offset)
-                node["start"] = offset
-                node["end"] = offset + len(word) - 1
-                offset += len(word)
-            address += 1
+    address = 0
+    offset = 0
+    while dependency_graph.contains_address(address):
+        node = dependency_graph.get_by_address(address)
+        word = node["word"]
+        if isinstance(word, str):
+            offset = sentence_text.find(word, offset)
+            node["start"] = offset
+            node["end"] = offset + len(word) - 1
+            offset += len(word)
+        address += 1
 
-        return dependency_graph
-    except StopIteration:
-        return None
+    return dependency_graph
 
 
 def extract_features(analysis, entities, id_entity_1, id_entity_2):
@@ -113,18 +115,30 @@ def extract_features(analysis, entities, id_entity_1, id_entity_2):
         address += 1
 
     if entity_1_address is None or entity_2_address is None:
-        return features
+        raise AttributeError
 
     entity_1 = analysis.get_by_address(entity_1_address)
     entity_2 = analysis.get_by_address(entity_2_address)
 
     if entity_1_address > 1:
         features.append("lb1=" + analysis.get_by_address(entity_1_address-1)["lemma"])
+    if entity_1_address > 2:
+        features.append("lb1=" + analysis.get_by_address(entity_1_address-2)["lemma"])
+
     features.append("la1=" + analysis.get_by_address(entity_1_address+1)["lemma"])
     features.append("lb2=" + analysis.get_by_address(entity_2_address-1)["lemma"])
+
     la2 = analysis.get_by_address(entity_2_address+1)["lemma"]
     if la2 is not None:
-        features.append("la2=" + analysis.get_by_address(entity_2_address+1)["lemma"])
+        features.append("la2=" + la2)
+    la2 = analysis.get_by_address(entity_2_address+2)["lemma"]
+    if la2 is not None:
+        features.append("la2=" + la2)
+
+    features.append("h1=" + str(analysis.get_by_address(entity_1["head"])["lemma"]))
+    features.append("h2=" + str(analysis.get_by_address(entity_2["head"])["lemma"]))
+    features.append("h1r=" + str(analysis.get_by_address(entity_1["head"])["rel"]))
+    features.append("h2r=" + str(analysis.get_by_address(entity_2["head"])["rel"]))
 
     return features
 
