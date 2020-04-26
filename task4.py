@@ -1,6 +1,8 @@
 from xml.dom.minidom import parse
 from nltk.parse.corenlp import CoreNLPDependencyParser
+from nltk.classify import MaxentClassifier
 import os
+import numpy
 from tqdm import tqdm
 
 
@@ -9,15 +11,27 @@ from tqdm import tqdm
 
 import nltk
 nltk.download('punkt')
-TRAIN_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Train')
+TRAIN_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Test-DDI')
 DEVEL_INPUT_DIR = os.path.join(os.path.dirname(__file__), 'data\Devel')
-OUTPUT_FILE = "task9.2_output_1.txt"
+VERSION = 1
 
 
-def ddi(train_inputdir, devel_inputdir, outputfile):
-    open(outputfile, "w").close()
-    for file in tqdm(os.listdir(train_inputdir)):
-        tree = parse(os.path.join(train_inputdir, file))
+def ddi(train_inputdir, devel_inputdir):
+
+    training_vector = feature_extractor(train_inputdir, True)
+    test_vector = feature_extractor(devel_inputdir, False)
+
+    classifier = MaxentClassifier.train(training_vector, algorithm="iis", max_iter=20)
+
+    for featureset in test_vector:
+        result = classifier.classify(featureset)
+        print("Ended succesfully")
+
+
+def feature_extractor(inputdir, training=True):
+    vector = []
+    for file in tqdm(os.listdir(inputdir)):
+        tree = parse(os.path.join(inputdir, file))
         sentences = tree.getElementsByTagName("sentence")
         for sentence in sentences:
             sentence_id = sentence.getAttribute("id")
@@ -43,9 +57,9 @@ def ddi(train_inputdir, devel_inputdir, outputfile):
                     interaction_type = pair.attributes["type"].value
                 else:
                     interaction_type = "null"
-                output_features(sentence_id, id_entity_1, id_entity_2, interaction_type, features)
 
-    evaluate(train_inputdir, outputfile)
+                vector = vector + output_features(interaction_type, features, training)
+    return vector
 
 
 def analyze(sentence_text):
@@ -100,17 +114,25 @@ def extract_features(analysis, entities, id_entity_1, id_entity_2):
         features.append("lb1=" + analysis.get_by_address(entity_1_address-1)["lemma"])
     features.append("la1=" + analysis.get_by_address(entity_1_address+1)["lemma"])
     features.append("lb2=" + analysis.get_by_address(entity_2_address-1)["lemma"])
-    features.append("la2=" + analysis.get_by_address(entity_2_address+1)["lemma"])
+    la2 = analysis.get_by_address(entity_2_address+1)["lemma"]
+    if la2 is not None:
+        features.append("la2=" + analysis.get_by_address(entity_2_address+1)["lemma"])
 
     return features
 
 
-def output_features(sentence_id, id_entity_1, id_entity_2, interaction_type, features):
-    str_features = ""
-    for feature in features:
-        str_features += feature + ' '
-    print(sentence_id + ' ' + id_entity_1 + ' ' + id_entity_2 + ' ' + interaction_type + ' ' + str_features[:-1])
-    return ""
+def output_features(interaction_type, features, training):
+    vector = []
+    if training:
+        vector = vector + [(word_feats(features), interaction_type)]
+    else:
+        vector = vector + [word_feats(features)]
+    # print(sentence_id + ' ' + id_entity_1 + ' ' + id_entity_2 + ' ' + interaction_type + ' ' + str_features[:-1])
+    return vector
+
+
+def word_feats(features):
+    return dict([(feature, True) for feature in features])
 
 
 def evaluate(inputdir, outputfile):
@@ -123,4 +145,4 @@ def evaluate(inputdir, outputfile):
 
 
 if __name__ == "__main__":
-    ddi(TRAIN_INPUT_DIR, DEVEL_INPUT_DIR, OUTPUT_FILE)
+    ddi(TRAIN_INPUT_DIR, DEVEL_INPUT_DIR)
