@@ -38,8 +38,12 @@ def ddi(train_inputdir, devel_inputdir, outputfile):
                 id_entity_1 = pair.attributes["e1"].value
                 id_entity_2 = pair.attributes["e2"].value
                 features = extract_features(analysis, entities, id_entity_1, id_entity_2)
-                print(str(features))
-                output_features(sentence_id, id_entity_1, id_entity_2, features)
+
+                if pair.hasAttribute("type"):
+                    interaction_type = pair.attributes["type"].value
+                else:
+                    interaction_type = "null"
+                output_features(sentence_id, id_entity_1, id_entity_2, interaction_type, features)
 
     evaluate(train_inputdir, outputfile)
 
@@ -101,7 +105,11 @@ def extract_features(analysis, entities, id_entity_1, id_entity_2):
     return features
 
 
-def output_features(sentence_id, id_entity_1, id_entity_2, features):
+def output_features(sentence_id, id_entity_1, id_entity_2, interaction_type, features):
+    str_features = ""
+    for feature in features:
+        str_features += feature + ' '
+    print(sentence_id + ' ' + id_entity_1 + ' ' + id_entity_2 + ' ' + interaction_type + ' ' + str_features[:-1])
     return ""
 
 
