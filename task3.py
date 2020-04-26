@@ -14,6 +14,7 @@ OUTPUT_FILE = "task9.2_output_1.txt"
 
 
 def ddi(inputdir, outputfile):
+    # ddi function is implemented as specified on the lab statement
     open(outputfile, "w").close()
     for file in tqdm(os.listdir(inputdir)):
         tree = parse(os.path.join(inputdir, file))

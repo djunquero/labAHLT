@@ -16,6 +16,10 @@ OUTPUT_FILE = "task9.2_output_2.txt"
 
 
 def ddi(train_inputdir, devel_inputdir, outputfile):
+    # ddi was changed: previous code was moved to "feature extractor" to isolate
+    # the proceess from the learner and the classifier. Vectors are a list of 2 values: the string with the sentence_id
+    # and the ids of the entity pair, which are needed for the evaluator, and a second value with the featuresets
+    # required by MaxentClassifier
 
     training_vector = feature_extractor(train_inputdir, True)
     test_vector = feature_extractor(devel_inputdir, False)
@@ -23,9 +27,10 @@ def ddi(train_inputdir, devel_inputdir, outputfile):
     featuresets = []
     for featureset in training_vector:
         featuresets = featuresets + featureset[1]
-    classifier = MaxentClassifier.train(featuresets, algorithm="iis", max_iter=100)
+    classifier = MaxentClassifier.train(featuresets, algorithm="iis", max_iter=50)
 
     file = open(outputfile, "w")
+    # The classifier is called for each featureset, in order to assign
     for featureset in test_vector:
         result = classifier.classify(featureset[1])
         if result == "null":
@@ -76,9 +81,13 @@ def feature_extractor(inputdir, training=True):
 
 
 def analyze(sentence_text):
+
+    # Core NLP is used. It sometimes throws StopIteration exception, in which case the analysis continues with the next
+    # sentence
     parser = CoreNLPDependencyParser(url="http://localhost:9000")
     dependency_graph, = parser.raw_parse(sentence_text)
 
+    # For every word, the offset is added to the corresponding node
     address = 0
     offset = 0
     while dependency_graph.contains_address(address):
@@ -112,6 +121,16 @@ def extract_features(analysis, entities, id_entity_1, id_entity_2):
                 entity_2_address = address
             if entity_1_address is not None and entity_2_address is not None:
                 break
+            # While checking sentence, we look for keywords, which basically reuses rules from task 3
+            if node["word"] in ["administer", "potentiate", "prevent"]:
+                features.append("key_e=" + node["word"])
+            if node["word"] in ["reduce", "increase", "decrease"]:
+                features.append("key_m=" + node["word"])
+            if node["word"] in ["interact", "interaction", "drug"]:
+                features.append("key_i=" + node["word"])
+            if node["word"] in ["should", "require", "recommend", "is"]:
+                features.append("key_a=" + node["word"])
+
         address += 1
 
     if entity_1_address is None or entity_2_address is None:
@@ -135,10 +154,17 @@ def extract_features(analysis, entities, id_entity_1, id_entity_2):
     if la2 is not None:
         features.append("la2=" + la2)
 
-    features.append("h1=" + str(analysis.get_by_address(entity_1["head"])["lemma"]))
-    features.append("h2=" + str(analysis.get_by_address(entity_2["head"])["lemma"]))
-    features.append("h1r=" + str(analysis.get_by_address(entity_1["head"])["rel"]))
-    features.append("h2r=" + str(analysis.get_by_address(entity_2["head"])["rel"]))
+    features.append("tag1=" + str(entity_1["tag"]))
+    features.append("tag2=" + str(entity_2["tag"]))
+
+    head_1 = analysis.get_by_address(entity_1["head"])
+    head_2 = analysis.get_by_address(entity_2["head"])
+
+    features.append("h1_1=" + str(head_1["lemma"]))
+    features.append("h2_1=" + str(head_2["lemma"]))
+    features.append("h1_r=" + str(head_1["rel"]))
+    features.append("h2_r=" + str(head_2["rel"]))
+
 
     return features
 
